@@ -141,6 +141,7 @@ export type ArchiveBlock = BlockBase<'archive'> & {
   docs?: ArchiveItem[];
   introContent?: RichText | null;
   items?: ArchiveItem[];
+  posts?: ArchiveItem[];
   selectedDocs?: Array<{
     relationTo: 'posts';
     value: ArchiveItem | string;
@@ -238,7 +239,36 @@ export type OperationalControls = {
   mode?: 'maintenance' | 'normal' | 'notice';
 };
 
+export type ContentAlertAction = {
+  href: string;
+  label: string;
+};
+
+export type ContentAlert = {
+  actions: ContentAlertAction[];
+  dismissible: boolean;
+  eyebrow?: string;
+  frequency:
+    | {type: 'always'}
+    | {type: 'session'}
+    | {type: 'once'}
+    | {cooldownHours?: number; type: 'cooldown'};
+  id: string;
+  image?: Media;
+  message: string;
+  pageSlugs: string[];
+  placement: 'topBar' | 'modal';
+  priority: number;
+  revision: number | string;
+  title: string;
+  trigger:
+    | {type: 'load'}
+    | {delayMs?: number; type: 'delay'}
+    | {scrollPercent?: number; type: 'scroll'};
+};
+
 export type Bootstrap = {
+  alerts?: ContentAlert[];
   experience?: {
     labels?: Array<{key: string; value: string}>;
     visibleModules?: string[];

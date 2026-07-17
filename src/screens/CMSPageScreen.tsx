@@ -1,10 +1,12 @@
 import type {NavigationProp} from '@react-navigation/native';
-import {useNavigation} from '@react-navigation/native';
-import React, {useCallback} from 'react';
-import {FlatList, RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {useIsFocused, useNavigation} from '@react-navigation/native';
+import React, {useCallback, useEffect, useState} from 'react';
+import {FlatList, type NativeScrollEvent, type NativeSyntheticEvent, RefreshControl, StyleSheet, Text, View} from 'react-native';
 
 import {BlockRenderer} from '../components/BlockRenderer';
+import {ContentAlerts} from '../components/ContentAlerts';
 import {ScreenState} from '../components/ScreenState';
+import {useAppContent} from '../context/AppContentContext';
 import {useCMSPage} from '../context/useCMSPage';
 import {colors, spacing} from '../theme/tokens';
 import type {ContentBlock} from '../types/content';
@@ -22,7 +24,12 @@ const routeForPath = (path: string) => {
 
 export const CMSPageScreen = ({slug}: {slug: string}) => {
   const navigation = useNavigation<Navigation>();
+  const isFocused = useIsFocused();
+  const {bootstrap} = useAppContent();
   const {page, error, loading, refreshing, reload, stale} = useCMSPage(slug);
+  const [scrollPercent, setScrollPercent] = useState(0);
+
+  useEffect(() => setScrollPercent(0), [slug]);
   const onNavigate = useCallback((path: string) => {
     const target = routeForPath(path);
     if (!target) {
@@ -36,6 +43,14 @@ export const CMSPageScreen = ({slug}: {slug: string}) => {
       navigation.navigate(target.name);
     }
   }, [navigation]);
+  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const {contentOffset, contentSize, layoutMeasurement} = event.nativeEvent;
+    const scrollableHeight = contentSize.height - layoutMeasurement.height;
+    const nextPercent = scrollableHeight > 0
+      ? Math.min(100, Math.max(0, Math.round((contentOffset.y / scrollableHeight) * 100)))
+      : 0;
+    setScrollPercent(current => current === nextPercent ? current : nextPercent);
+  }, []);
 
   if (loading && !page) return <ScreenState />;
   if (error && !page) return <ScreenState message={error} onRetry={reload} />;
@@ -43,11 +58,21 @@ export const CMSPageScreen = ({slug}: {slug: string}) => {
   return (
     <View style={styles.container}>
       {stale ? <Text accessibilityRole="alert" style={styles.offline}>Offline content</Text> : null}
+      <ContentAlerts
+        alerts={bootstrap?.alerts}
+        isFocused={isFocused}
+        onNavigate={onNavigate}
+        pageLoaded={Boolean(page)}
+        scrollPercent={scrollPercent}
+        slug={slug}
+      />
       <FlatList<ContentBlock>
         data={page?.layout || []}
         keyExtractor={(item, index) => `${item.blockType}-${index}`}
         refreshControl={<RefreshControl colors={[colors.tomato]} onRefresh={reload} refreshing={refreshing} tintColor={colors.tomato} />}
         renderItem={({item}) => <BlockRenderer block={item} onNavigate={onNavigate} />}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       />
     </View>
   );

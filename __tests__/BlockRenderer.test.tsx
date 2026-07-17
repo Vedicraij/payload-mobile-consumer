@@ -24,7 +24,7 @@ const knownBlocks: Array<[string, ContentBlock]> = [
   ['cta', {blockType: 'cta', richText: richText('Shared CTA'), links: []}],
   ['content', {blockType: 'content', columns: [{richText: richText('Shared content')}]}],
   ['mediaBlock', {blockType: 'mediaBlock', media: {id: 'media', url: '/media/photo.jpg', mimeType: 'image/jpeg'}}],
-  ['archive', {blockType: 'archive', introContent: richText('Recent posts'), items: [{id: 'post', title: 'A post'}]}],
+  ['archive', {blockType: 'archive', introContent: richText('Recent posts'), posts: [{id: 'post', title: 'A post'}]}],
   ['formBlock', {blockType: 'formBlock', form: {id: 'contact', title: 'Contact', fields: [], submitButtonLabel: 'Send'}}],
 ];
 
@@ -43,6 +43,52 @@ test('extracts and presents shared rich text', async () => {
   });
   const text = renderer!.root.findAllByType(Text).map(node => node.props.children);
   expect(text).toContain('Content delivered by Payload.');
+});
+
+test('renders posts emitted by the CMS archive contract', async () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(() => {
+    renderer = ReactTestRenderer.create(
+      <BlockRenderer
+        block={{blockType: 'archive', posts: [{id: 'post', title: 'CMS post'}]}}
+        onNavigate={() => undefined}
+      />,
+    );
+  });
+  const text = renderer!.root.findAllByType(Text).map(node => node.props.children);
+  expect(text).toContain('CMS post');
+});
+
+test('treats a string checkbox default of false as unchecked', async () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer;
+  await ReactTestRenderer.act(() => {
+    renderer = ReactTestRenderer.create(
+      <BlockRenderer
+        block={{
+          blockType: 'formBlock',
+          form: {
+            fields: [
+              {
+                blockType: 'checkbox',
+                defaultValue: 'false',
+                label: 'Subscribe',
+                name: 'subscribe',
+              } as never,
+            ],
+            id: 'form',
+            title: 'Form',
+          },
+        }}
+        onNavigate={() => undefined}
+      />,
+    );
+  });
+
+  let checkbox = renderer!.root.findByProps({accessibilityRole: 'checkbox'});
+  expect(checkbox.props.accessibilityState.checked).toBe(false);
+  await ReactTestRenderer.act(() => checkbox.props.onPress());
+  checkbox = renderer!.root.findByProps({accessibilityRole: 'checkbox'});
+  expect(checkbox.props.accessibilityState.checked).toBe(true);
 });
 
 test('ignores unknown CMS blocks with a development warning', async () => {

@@ -49,6 +49,7 @@ export const SharedMediaBlock = ({block, onNavigate}: NavigationProps & {block: 
 };
 
 const archiveItems = (block: BlockOf<'archive'>): ArchiveItem[] => {
+  if (block.posts?.length) return block.posts;
   if (block.items?.length) return block.items;
   if (block.docs?.length) return block.docs;
   return block.selectedDocs?.flatMap(item => typeof item.value === 'object' ? [item.value] : []) || [];
@@ -65,17 +66,27 @@ export const SharedArchiveBlock = ({block, onNavigate}: NavigationProps & {block
   </View>
 );
 
-type FormValue = boolean | string;
+type FormValue = boolean | number | string;
 
-const initialValues = (fields: FormField[]) => Object.fromEntries(fields.flatMap(field => {
-  if (field.blockType === 'message') return [];
-  return [[field.name, field.defaultValue ?? (field.blockType === 'checkbox' ? false : '')]];
-})) as Record<string, FormValue>;
+const checkboxValue = (value: unknown) => value === true || value === 'true';
+
+const initialValues = (fields: FormField[]) => {
+  const entries: Array<[string, FormValue]> = [];
+  fields.forEach(field => {
+    if (field.blockType === 'message') return;
+    entries.push([
+      field.name,
+      field.blockType === 'checkbox' ? checkboxValue(field.defaultValue) : field.defaultValue ?? '',
+    ]);
+  });
+  return Object.fromEntries(entries) as Record<string, FormValue>;
+};
 
 const FormInput = ({field, value, onChange}: {field: Exclude<FormField, {blockType: 'message'}>; value: FormValue; onChange: (value: FormValue) => void}) => {
   const label = field.label || field.name;
   if (field.blockType === 'checkbox') {
-    return <Pressable accessibilityRole="checkbox" accessibilityState={{checked: Boolean(value)}} onPress={() => onChange(!value)} style={styles.checkbox}><Text style={styles.checkboxMark}>{value ? '[x]' : '[ ]'}</Text><Text>{label}{field.required ? ' *' : ''}</Text></Pressable>;
+    const checked = checkboxValue(value);
+    return <Pressable accessibilityRole="checkbox" accessibilityState={{checked}} onPress={() => onChange(!checked)} style={styles.checkbox}><Text style={styles.checkboxMark}>{checked ? '[x]' : '[ ]'}</Text><Text>{label}{field.required ? ' *' : ''}</Text></Pressable>;
   }
   if (field.blockType === 'select') {
     const options = field.options || [];
@@ -111,7 +122,7 @@ export const SharedFormBlock = ({block, onNavigate}: NavigationProps & {block: B
       const response = await fetch(`${CMS_URL}/api/form-submissions`, {
         body: JSON.stringify({
           form: form.id,
-          submissionData: fields.flatMap(field => field.blockType === 'message' ? [] : [{field: field.name, value: String(values[field.name] ?? '')}]),
+          submissionData: fields.flatMap(field => field.blockType === 'message' ? [] : [{field: field.name, value: field.blockType === 'checkbox' ? checkboxValue(values[field.name]) : String(values[field.name] ?? '')}]),
         }),
         headers: {'Content-Type': 'application/json'},
         method: 'POST',

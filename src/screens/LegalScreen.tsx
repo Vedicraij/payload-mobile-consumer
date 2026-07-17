@@ -1,0 +1,37 @@
+import type {RouteProp} from '@react-navigation/native';
+import React, {useEffect, useState} from 'react';
+import {ScrollView, StyleSheet, Text} from 'react-native';
+
+import {contentAPI} from '../api/content';
+import {ScreenState} from '../components/ScreenState';
+import {colors, spacing} from '../theme/tokens';
+import type {LegalContent} from '../types/content';
+
+const lexicalText = (value: unknown): string => {
+  if (!value || typeof value !== 'object') return '';
+  if ('text' in value && typeof value.text === 'string') return value.text;
+  if ('children' in value && Array.isArray(value.children)) return value.children.map(lexicalText).join(' ');
+  if ('root' in value) return lexicalText(value.root);
+  return '';
+};
+
+export const LegalScreen = ({route}: {route: RouteProp<{Legal: {key: string}}, 'Legal'>}) => {
+  const [content, setContent] = useState<LegalContent | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    contentAPI.legal(route.params.key).then(result => setContent(result.data)).catch(reason => setError(reason instanceof Error ? reason.message : 'Could not load legal content.'));
+  }, [route.params.key]);
+
+  if (error) return <ScreenState message={error} />;
+  if (!content) return <ScreenState />;
+  return <ScrollView contentContainerStyle={styles.container}><Text style={styles.version}>Document {content.legalVersion}</Text><Text accessibilityRole="header" style={styles.title}>{content.title}</Text><Text style={styles.summary}>{content.summary}</Text><Text style={styles.body}>{lexicalText(content.content)}</Text></ScrollView>;
+};
+
+const styles = StyleSheet.create({
+  body: {borderTopColor: colors.ink, borderTopWidth: 2, fontSize: 17, lineHeight: 28, marginTop: spacing.xl, paddingTop: spacing.lg},
+  container: {backgroundColor: colors.paper, flexGrow: 1, padding: spacing.lg},
+  summary: {fontSize: 20, lineHeight: 29},
+  title: {fontSize: 48, fontWeight: '900', letterSpacing: -2, lineHeight: 44, marginVertical: spacing.md, textTransform: 'uppercase'},
+  version: {color: colors.tomato, fontSize: 11, fontWeight: '900', letterSpacing: 1.4, marginTop: spacing.xl, textTransform: 'uppercase'},
+});

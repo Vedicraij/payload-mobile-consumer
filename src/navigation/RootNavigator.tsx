@@ -1,0 +1,50 @@
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {NavigationContainer, type LinkingOptions, type NavigatorScreenParams} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import React from 'react';
+import {StyleSheet, Text} from 'react-native';
+
+import {OperationalGate} from '../components/OperationalGate';
+import {useAppContent} from '../context/AppContentContext';
+import {CMSPageScreen} from '../screens/CMSPageScreen';
+import {LegalScreen} from '../screens/LegalScreen';
+import {ReservationsScreen} from '../screens/ReservationsScreen';
+import {ReorderScreen} from '../screens/ReorderScreen';
+import {colors} from '../theme/tokens';
+
+export type TabParams = {Home: undefined; Menu: undefined; Reservations: undefined; Reorder: undefined};
+export type RootStackParams = {Main: NavigatorScreenParams<TabParams> | undefined; Legal: {key: string}};
+
+const Stack = createNativeStackNavigator<RootStackParams>();
+const Tabs = createBottomTabNavigator<TabParams>();
+
+const TabMark = ({label, focused}: {focused: boolean; label: string}) => <Text style={[styles.tabMark, focused && styles.tabMarkActive]}>{label.slice(0, 1)}</Text>;
+const HomeScreen = () => <CMSPageScreen slug="home" />;
+const MenuScreen = () => <CMSPageScreen slug="menu" />;
+const HomeIcon = ({focused}: {focused: boolean}) => <TabMark focused={focused} label="Home" />;
+const MenuIcon = ({focused}: {focused: boolean}) => <TabMark focused={focused} label="Menu" />;
+const ReservationIcon = ({focused}: {focused: boolean}) => <TabMark focused={focused} label="Reserve" />;
+const ReorderIcon = ({focused}: {focused: boolean}) => <TabMark focused={focused} label="Reorder" />;
+
+const MainTabs = () => {
+  const {bootstrap} = useAppContent();
+  const labels = Object.fromEntries((bootstrap?.navigation?.items || []).map(item => [item.destination.path, item.label]));
+  return <Tabs.Navigator screenOptions={{headerStyle: {backgroundColor: colors.paper}, headerTitleStyle: {fontWeight: '900'}, tabBarActiveTintColor: colors.tomato, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: {fontSize: 10, fontWeight: '800', textTransform: 'uppercase'}, tabBarStyle: {backgroundColor: colors.ink, borderTopWidth: 0, height: 68, paddingBottom: 8, paddingTop: 8}}}>
+    <Tabs.Screen component={HomeScreen} name="Home" options={{tabBarLabel: labels['/'] || 'Home', tabBarIcon: HomeIcon, title: 'Casa Maiz'}} />
+    <Tabs.Screen component={MenuScreen} name="Menu" options={{tabBarLabel: labels['/menu'] || 'Menu', tabBarIcon: MenuIcon}} />
+    <Tabs.Screen component={ReservationsScreen} name="Reservations" options={{tabBarLabel: labels['/reservas'] || 'Reserve', tabBarIcon: ReservationIcon}} />
+    {bootstrap?.featureFlags.show_reorder ? <Tabs.Screen component={ReorderScreen} name="Reorder" options={{tabBarIcon: ReorderIcon}} /> : null}
+  </Tabs.Navigator>;
+};
+
+const linking: LinkingOptions<RootStackParams> = {
+  prefixes: ['casamaiz://'],
+  config: {screens: {Main: {screens: {Home: '', Menu: 'menu', Reservations: 'reservas', Reorder: 'reorder'}}, Legal: 'legal/:key'}},
+};
+
+export const RootNavigator = () => <OperationalGate><NavigationContainer linking={linking}><Stack.Navigator><Stack.Screen component={MainTabs} name="Main" options={{headerShown: false}} /><Stack.Screen component={LegalScreen} name="Legal" options={{headerBackTitle: 'Back', title: 'Casa Maiz'}} /></Stack.Navigator></NavigationContainer></OperationalGate>;
+
+const styles = StyleSheet.create({
+  tabMark: {color: colors.muted, fontSize: 17, fontWeight: '900'},
+  tabMarkActive: {color: colors.corn},
+});

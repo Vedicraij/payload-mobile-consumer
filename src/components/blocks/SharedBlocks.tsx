@@ -2,8 +2,8 @@ import {usePostHog} from 'posthog-react-native';
 import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 
-import {CMS_URL} from '../../api/config';
 import {absoluteMediaURL} from '../../api/content';
+import {submitFormSubmission} from '../../api/forms';
 import {colors, spacing} from '../../theme/tokens';
 import type {ArchiveItem, BlockOf, FormField} from '../../types/content';
 import {RemoteImage} from '../RemoteImage';
@@ -13,7 +13,7 @@ import {RichText} from './RichText';
 type NavigationProps = {onNavigate: (path: string) => void};
 
 const Action = ({href, label, onNavigate}: NavigationProps & {href?: string; label: string}) => (
-  <Pressable accessibilityRole="button" onPress={() => openContentLink(href, onNavigate)} style={styles.button}>
+  <Pressable accessibilityRole="link" onPress={() => openContentLink(href, onNavigate)} style={styles.button}>
     <Text style={styles.buttonText}>{label}</Text>
   </Pressable>
 );
@@ -104,7 +104,7 @@ const FormInput = ({field, value, onChange}: {field: Exclude<FormField, {blockTy
   const label = field.label || field.name;
   if (field.blockType === 'checkbox') {
     const checked = checkboxValue(value);
-    return <Pressable accessibilityRole="checkbox" accessibilityState={{checked}} onPress={() => onChange(!checked)} style={styles.checkbox}><Text style={styles.checkboxMark}>{checked ? '[x]' : '[ ]'}</Text><Text>{label}{field.required ? ' *' : ''}</Text></Pressable>;
+    return <Pressable accessibilityLabel={label} accessibilityRole="checkbox" accessibilityState={{checked}} onPress={() => onChange(!checked)} style={styles.checkbox} testID={`form-field-${field.name}`}><Text style={styles.checkboxMark}>{checked ? '[x]' : '[ ]'}</Text><Text>{label}{field.required ? ' *' : ''}</Text></Pressable>;
   }
   if (field.blockType === 'select') {
     const options = field.options || [];
@@ -113,10 +113,13 @@ const FormInput = ({field, value, onChange}: {field: Exclude<FormField, {blockTy
       const current = options.findIndex(option => option.value === value);
       onChange(options[(current + 1) % options.length]?.value || '');
     };
-    return <View><Text style={styles.label}>{label}{field.required ? ' *' : ''}</Text><Pressable accessibilityLabel={label} accessibilityRole="button" onPress={selectNext} style={styles.input}><Text>{selected?.label || field.placeholder || 'Select an option'}</Text></Pressable></View>;
+    return <View><Text style={styles.label}>{label}{field.required ? ' *' : ''}</Text><Pressable accessibilityHint="Selects the next available option" accessibilityLabel={label} accessibilityRole="button" onPress={selectNext} style={styles.input} testID={`form-field-${field.name}`}><Text>{selected?.label || field.placeholder || 'Select an option'}</Text></Pressable></View>;
   }
-  return <View><Text nativeID={`form-${field.name}`} style={styles.label}>{label}{field.required ? ' *' : ''}</Text><TextInput accessibilityLabel={label} accessibilityLabelledBy={`form-${field.name}`} inputMode={field.blockType === 'email' ? 'email' : field.blockType === 'number' ? 'numeric' : 'text'} multiline={field.blockType === 'textarea'} onChangeText={onChange} placeholder={field.placeholder || undefined} style={[styles.input, field.blockType === 'textarea' && styles.textarea]} textAlignVertical={field.blockType === 'textarea' ? 'top' : 'center'} value={String(value)} /></View>;
+  return <View><Text nativeID={`form-${field.name}`} style={styles.label}>{label}{field.required ? ' *' : ''}</Text><TextInput accessibilityLabel={label} accessibilityLabelledBy={`form-${field.name}`} autoCapitalize={field.blockType === 'email' ? 'none' : 'sentences'} autoCorrect={field.blockType !== 'email'} inputMode={field.blockType === 'email' ? 'email' : field.blockType === 'number' ? 'numeric' : 'text'} multiline={field.blockType === 'textarea'} onChangeText={onChange} placeholder={field.placeholder || undefined} style={[styles.input, field.blockType === 'textarea' && styles.textarea]} testID={`form-field-${field.name}`} textAlignVertical={field.blockType === 'textarea' ? 'top' : 'center'} value={String(value)} /></View>;
 };
+
+const isMissing = (value: FormValue | undefined) =>
+  typeof value === 'boolean' ? !value : typeof value === 'string' ? !value.trim() : value === undefined;
 
 export const SharedFormBlock = ({block, onNavigate}: NavigationProps & {block: BlockOf<'formBlock'>}) => {
   const form = typeof block.form === 'object' ? block.form : undefined;
@@ -129,24 +132,25 @@ export const SharedFormBlock = ({block, onNavigate}: NavigationProps & {block: B
   if (!form) return <View style={styles.section}><Text>Form unavailable.</Text></View>;
 
   const submit = async () => {
-    const missing = fields.some(field => field.blockType !== 'message' && field.required && !values[field.name]);
+    const missing = fields.some(field => field.blockType !== 'message' && field.required && isMissing(values[field.name]));
     if (missing) {
       setMessage('Complete all required fields.');
+      setStatus('error');
+      return;
+    }
+    const invalidEmail = fields.some(field => field.blockType === 'email' && values[field.name] && !/^\S+@\S+\.\S+$/.test(String(values[field.name]).trim()));
+    if (invalidEmail) {
+      setMessage('Enter a valid email address.');
       setStatus('error');
       return;
     }
     setStatus('submitting');
     setMessage('');
     try {
-      const response = await fetch(`${CMS_URL}/api/form-submissions`, {
-        body: JSON.stringify({
-          form: form.id,
-          submissionData: fields.flatMap(field => field.blockType === 'message' ? [] : [{field: field.name, value: field.blockType === 'checkbox' ? checkboxValue(values[field.name]) : String(values[field.name] ?? '')}]),
-        }),
-        headers: {'Content-Type': 'application/json'},
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error(`Form submission failed (${response.status}).`);
+      await submitFormSubmission(
+        form.id,
+        fields.flatMap(field => field.blockType === 'message' ? [] : [{field: field.name, value: field.blockType === 'checkbox' ? checkboxValue(values[field.name]) : String(values[field.name] ?? '')}]),
+      );
       posthog.capture('form_submitted', {form_id: form.id, form_title: form.title});
       setStatus('submitted');
       if (form.confirmationType === 'redirect') {
@@ -168,7 +172,7 @@ export const SharedFormBlock = ({block, onNavigate}: NavigationProps & {block: B
     <Text accessibilityRole="header" style={styles.formTitle}>{form.title}</Text>
     {fields.map((field, index) => field.blockType === 'message' ? <RichText key={index} value={field.message} /> : <FormInput field={field} key={field.name} onChange={value => setValues(current => ({...current, [field.name]: value}))} value={values[field.name] ?? ''} />)}
     {message ? <Text accessibilityRole="alert" style={styles.error}>{message}</Text> : null}
-    <Pressable accessibilityRole="button" accessibilityState={{disabled: status === 'submitting'}} disabled={status === 'submitting'} onPress={submit} style={styles.submit}><Text style={styles.submitText}>{status === 'submitting' ? 'Submitting...' : form.submitButtonLabel || 'Submit'}</Text></Pressable>
+    <Pressable accessibilityLabel={form.submitButtonLabel || 'Submit form'} accessibilityRole="button" accessibilityState={{disabled: status === 'submitting'}} disabled={status === 'submitting'} onPress={submit} style={styles.submit} testID={`form-${form.id}-submit`}><Text style={styles.submitText}>{status === 'submitting' ? 'Submitting...' : form.submitButtonLabel || 'Submit'}</Text></Pressable>
   </View>;
 };
 

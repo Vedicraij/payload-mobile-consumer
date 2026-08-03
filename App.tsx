@@ -11,7 +11,7 @@ import {colors} from './src/theme/tokens';
 export default function App() {
   return (
     <SafeAreaProvider>
-      <StatusBar backgroundColor={colors.ink} barStyle="light-content" />
+      <StatusBar backgroundColor={colors.paper} barStyle="dark-content" />
       <AppContentProvider>
         <RootNavigator />
       </AppContentProvider>

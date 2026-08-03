@@ -3,7 +3,7 @@ import {StyleSheet, Text, View} from 'react-native';
 
 import {colors, spacing} from '../theme/tokens';
 
-export const ReorderScreen = () => <View style={styles.container}><Text style={styles.eyebrow}>Feature flag enabled</Text><Text style={styles.title}>Order your favorites again.</Text><Text style={styles.body}>Ordering remains in the external restaurant platform. Payload controls whether this entry point is visible.</Text></View>;
+export const ReorderScreen = () => <View style={styles.container} testID="reorder-screen"><Text style={styles.eyebrow}>Feature flag enabled</Text><Text accessibilityRole="header" style={styles.title}>Order your favorites again.</Text><Text style={styles.body}>Ordering remains in the external restaurant platform. Payload controls whether this entry point is visible.</Text></View>;
 
 const styles = StyleSheet.create({
   body: {fontSize: 17, lineHeight: 26, marginTop: spacing.lg},

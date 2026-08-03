@@ -10,9 +10,13 @@ export const ScreenState = ({
   message?: string;
   onRetry?: () => void;
 }) => (
-  <View style={styles.container}>
-    {message ? <Text style={styles.title}>{message}</Text> : <ActivityIndicator color={colors.tomato} size="large" />}
-    {onRetry ? <Pressable accessibilityRole="button" onPress={onRetry} style={styles.button}><Text style={styles.buttonText}>Try again</Text></Pressable> : null}
+  <View accessibilityLiveRegion="polite" style={styles.container}>
+    {message ? (
+      <Text accessibilityRole="alert" style={styles.title} testID="screen-error">{message}</Text>
+    ) : (
+      <ActivityIndicator accessibilityLabel="Loading content" color={colors.tomato} size="large" testID="screen-loading" />
+    )}
+    {onRetry ? <Pressable accessibilityLabel="Try loading the content again" accessibilityRole="button" onPress={onRetry} style={styles.button} testID="retry-button"><Text style={styles.buttonText}>Try again</Text></Pressable> : null}
   </View>
 );
 

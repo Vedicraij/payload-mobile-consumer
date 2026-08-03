@@ -148,7 +148,7 @@ export const ContentAlerts = ({
   return (
     <>
       {topBar ? (
-        <View accessibilityLiveRegion="polite" style={styles.topBar}>
+        <View accessibilityLiveRegion="polite" style={styles.topBar} testID="content-alert-top-bar">
           {topBar.image ? <View style={styles.topBarImage}><RemoteImage height={90} media={topBar.image} /></View> : null}
           <View style={styles.topBarCopy}>
             {topBar.eyebrow ? <Text style={styles.topBarEyebrow}>{topBar.eyebrow}</Text> : null}
@@ -157,7 +157,7 @@ export const ContentAlerts = ({
             <View style={styles.topBarActions}>{actions(topBar)}</View>
           </View>
           {topBar.dismissible ? (
-            <Pressable accessibilityLabel={`Dismiss ${topBar.title}`} accessibilityRole="button" hitSlop={12} onPress={() => dismiss(topBar)} style={styles.close}>
+            <Pressable accessibilityLabel={`Dismiss ${topBar.title}`} accessibilityRole="button" hitSlop={12} onPress={() => dismiss(topBar)} style={styles.close} testID="dismiss-top-bar-alert">
               <Text style={styles.closeText}>X</Text>
             </Pressable>
           ) : null}
@@ -170,7 +170,7 @@ export const ContentAlerts = ({
         visible={Boolean(modal)}>
         {modal ? (
           <View style={styles.overlay}>
-            <View accessibilityViewIsModal style={styles.modal}>
+            <View accessibilityLabel={`${modal.title}. ${modal.message}`} accessibilityViewIsModal style={styles.modal} testID="content-alert-modal">
               {modal.image ? <RemoteImage height={240} media={modal.image} /> : null}
               <View style={styles.modalCopy}>
                 {modal.eyebrow ? <Text style={styles.modalEyebrow}>{modal.eyebrow}</Text> : null}
@@ -178,7 +178,7 @@ export const ContentAlerts = ({
                 <Text style={styles.modalMessage}>{modal.message}</Text>
                 <View style={styles.modalActions}>{actions(modal, true)}</View>
                 {modal.dismissible ? (
-                  <Pressable accessibilityRole="button" onPress={() => dismiss(modal)} style={styles.modalDismiss}>
+                  <Pressable accessibilityLabel={`Dismiss ${modal.title}`} accessibilityRole="button" onPress={() => dismiss(modal)} style={styles.modalDismiss} testID="dismiss-modal-alert">
                     <Text style={styles.modalDismissText}>Not now</Text>
                   </Pressable>
                 ) : null}

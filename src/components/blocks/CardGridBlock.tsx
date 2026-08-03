@@ -7,8 +7,8 @@ import type {BlockOf} from '../../types/content';
 
 export const CardGridBlock = ({block}: {block: BlockOf<'cardGrid'>}) => (
   <View style={styles.section}>
-    <Text style={styles.eyebrow}>{block.eyebrow}</Text><Text style={styles.heading}>{block.title}</Text>
-    {block.cards?.map(card => <View key={card.title} style={styles.card}><RemoteImage height={170} media={card.image} /><View style={styles.cardCopy}><Text style={styles.title}>{card.title}</Text><Text style={styles.body}>{card.description}</Text><Text style={styles.price}>{card.price}</Text></View></View>)}
+    <Text style={styles.eyebrow}>{block.eyebrow}</Text><Text accessibilityRole="header" style={styles.heading}>{block.title}</Text>
+    {block.cards?.map(card => <View key={card.title} style={styles.card}><RemoteImage height={170} media={card.image} /><View style={styles.cardCopy}><Text accessibilityRole="header" style={styles.title}>{card.title}</Text><Text style={styles.body}>{card.description}</Text><Text style={styles.price}>{card.price}</Text></View></View>)}
   </View>
 );
 

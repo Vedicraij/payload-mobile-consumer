@@ -7,7 +7,7 @@ import type {BlockOf} from '../../types/content';
 
 export const CarouselBlock = ({block}: {block: BlockOf<'carousel'>}) => {
   const {width} = useWindowDimensions();
-  return <View style={styles.section}><Text style={styles.heading}>{block.title}</Text><FlatList contentContainerStyle={styles.rail} data={block.slides || []} horizontal keyExtractor={item => item.title} renderItem={({item, index}) => <View style={[styles.slide, {width: width * 0.76}]}><Text style={styles.index}>0{index + 1}</Text><RemoteImage height={190} media={item.image} /><Text style={styles.title}>{item.title}</Text><Text>{item.description}</Text></View>} showsHorizontalScrollIndicator={false} /></View>;
+  return <View style={styles.section}><Text accessibilityRole="header" style={styles.heading}>{block.title}</Text><FlatList accessibilityLabel={block.title || 'Featured content'} contentContainerStyle={styles.rail} data={block.slides || []} horizontal keyExtractor={item => item.title} renderItem={({item, index}) => <View style={[styles.slide, {width: width * 0.76}]}><Text style={styles.index}>0{index + 1}</Text><RemoteImage height={190} media={item.image} /><Text accessibilityRole="header" style={styles.title}>{item.title}</Text><Text>{item.description}</Text></View>} showsHorizontalScrollIndicator={false} /></View>;
 };
 
 const styles = StyleSheet.create({

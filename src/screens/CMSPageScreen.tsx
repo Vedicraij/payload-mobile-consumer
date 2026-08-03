@@ -2,8 +2,9 @@ import type {NavigationProp} from '@react-navigation/native';
 import {useIsFocused, useNavigation} from '@react-navigation/native';
 import {usePostHog} from 'posthog-react-native';
 import React, {useCallback, useEffect, useState} from 'react';
-import {FlatList, type NativeScrollEvent, type NativeSyntheticEvent, RefreshControl, StyleSheet, Text, View} from 'react-native';
+import {FlatList, Linking, type NativeScrollEvent, type NativeSyntheticEvent, RefreshControl, StyleSheet, Text, View} from 'react-native';
 
+import {WEBSITE_URL} from '../api/config';
 import {BlockRenderer} from '../components/BlockRenderer';
 import {ContentAlerts, type ContentAlertEvent} from '../components/ContentAlerts';
 import {ScreenState} from '../components/ScreenState';
@@ -66,7 +67,9 @@ export const CMSPageScreen = ({slug}: {slug: string}) => {
   const onNavigate = useCallback((path: string) => {
     const target = routeForPath(path);
     if (!target) {
-      if (__DEV__) console.warn(`Unsupported internal CMS path: ${path}`);
+      Linking.openURL(`${WEBSITE_URL}${path}`).catch(() => {
+        if (__DEV__) console.warn(`Could not open CMS path: ${path}`);
+      });
       return;
     }
     const parent = navigation.getParent<Navigation>();
@@ -89,8 +92,8 @@ export const CMSPageScreen = ({slug}: {slug: string}) => {
   if (error && !page) return <ScreenState message={error} onRetry={reload} />;
 
   return (
-    <View style={styles.container}>
-      {stale ? <Text accessibilityRole="alert" style={styles.offline}>Offline content</Text> : null}
+    <View style={styles.container} testID={`cms-page-${slug}`}>
+      {stale ? <Text accessibilityRole="alert" style={styles.offline} testID="offline-content-banner">Offline content</Text> : null}
       <ContentAlerts
         alerts={bootstrap?.alerts}
         isFocused={isFocused}
@@ -101,12 +104,16 @@ export const CMSPageScreen = ({slug}: {slug: string}) => {
         slug={slug}
       />
       <FlatList<ContentBlock>
+        accessibilityLabel={`${page?.title || slug} content`}
+        contentContainerStyle={!page?.layout.length ? styles.emptyContent : undefined}
         data={page?.layout || []}
         keyExtractor={(item, index) => `${item.blockType}-${index}`}
+        ListEmptyComponent={<ScreenState message="No content is available right now." onRetry={reload} />}
         refreshControl={<RefreshControl colors={[colors.tomato]} onRefresh={onRefresh} refreshing={refreshing} tintColor={colors.tomato} />}
         renderItem={({item}) => <BlockRenderer block={item} onNavigate={onNavigate} />}
         onScroll={onScroll}
         scrollEventThrottle={16}
+        testID={`cms-page-${slug}-list`}
       />
     </View>
   );
@@ -114,5 +121,6 @@ export const CMSPageScreen = ({slug}: {slug: string}) => {
 
 const styles = StyleSheet.create({
   container: {backgroundColor: colors.paper, flex: 1},
+  emptyContent: {flexGrow: 1},
   offline: {backgroundColor: colors.corn, color: colors.ink, fontSize: 11, fontWeight: '900', padding: spacing.sm, textAlign: 'center', textTransform: 'uppercase'},
 });

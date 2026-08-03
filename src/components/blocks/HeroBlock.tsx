@@ -18,7 +18,7 @@ export const HeroBlock = ({block, onNavigate}: {block: BlockOf<'restaurantHero'>
         <View style={styles.actions}>
           {block.actions?.map(action => (
             <Pressable
-              accessibilityRole="button"
+              accessibilityRole="link"
               key={action.label}
               onPress={() => {
                 posthog.capture('hero_cta_tapped', {

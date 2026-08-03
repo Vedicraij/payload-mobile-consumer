@@ -11,17 +11,17 @@ export const PromoRailBlock = ({block, onNavigate}: {block: BlockOf<'promoRail'>
   const posthog = usePostHog();
   return (
     <View style={styles.section}>
-      <Text style={styles.heading}>{block.title}</Text>
+      <Text accessibilityRole="header" style={styles.heading}>{block.title}</Text>
       {block.promotions?.map(promo => (
         <View key={promo.id} style={styles.promo}>
           <RemoteImage height={190} media={promo.mobileImage || promo.desktopImage} />
           <View style={styles.copy}>
             <Text style={styles.eyebrow}>{promo.eyebrow}</Text>
-            <Text style={styles.title}>{promo.title}</Text>
+            <Text accessibilityRole="header" style={styles.title}>{promo.title}</Text>
             <Text style={styles.body}>{promo.description}</Text>
             {promo.cta?.destination?.path ? (
               <Pressable
-                accessibilityRole="button"
+                accessibilityRole="link"
                 onPress={() => {
                   posthog.capture('promo_cta_tapped', {
                     promo_id: promo.id,

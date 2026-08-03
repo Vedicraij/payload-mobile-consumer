@@ -1,6 +1,6 @@
 import type {RouteProp} from '@react-navigation/native';
 import {usePostHog} from 'posthog-react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {ScrollView, StyleSheet, Text} from 'react-native';
 
 import {contentAPI} from '../api/content';
@@ -21,7 +21,9 @@ export const LegalScreen = ({route}: {route: RouteProp<{Legal: {key: string}}, '
   const [error, setError] = useState('');
   const posthog = usePostHog();
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setError('');
+    setContent(null);
     contentAPI.legal(route.params.key)
       .then(result => {
         setContent(result.data);
@@ -32,11 +34,15 @@ export const LegalScreen = ({route}: {route: RouteProp<{Legal: {key: string}}, '
         });
       })
       .catch(reason => setError(reason instanceof Error ? reason.message : 'Could not load legal content.'));
-  }, [route.params.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [posthog, route.params.key]);
 
-  if (error) return <ScreenState message={error} />;
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (error) return <ScreenState message={error} onRetry={load} />;
   if (!content) return <ScreenState />;
-  return <ScrollView contentContainerStyle={styles.container}><Text style={styles.version}>Document {content.legalVersion}</Text><Text accessibilityRole="header" style={styles.title}>{content.title}</Text><Text style={styles.summary}>{content.summary}</Text><Text style={styles.body}>{lexicalText(content.content)}</Text></ScrollView>;
+  return <ScrollView contentContainerStyle={styles.container} testID={`legal-${route.params.key}`}><Text style={styles.version}>Document {content.legalVersion}</Text><Text accessibilityRole="header" style={styles.title}>{content.title}</Text><Text style={styles.summary}>{content.summary}</Text><Text style={styles.body}>{lexicalText(content.content)}</Text></ScrollView>;
 };
 
 const styles = StyleSheet.create({

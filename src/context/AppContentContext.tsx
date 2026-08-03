@@ -1,4 +1,5 @@
-import React, {createContext, useCallback, useContext, useEffect, useState} from 'react';
+import React, {createContext, useCallback, useContext, useEffect, useRef, useState} from 'react';
+import {AppState} from 'react-native';
 
 import {contentAPI} from '../api/content';
 import type {Bootstrap} from '../types/content';
@@ -18,14 +19,18 @@ export const AppContentProvider = ({children}: {children: React.ReactNode}) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [stale, setStale] = useState(false);
+  const bootstrapRef = useRef<Bootstrap | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!bootstrapRef.current) setLoading(true);
     setError(null);
     try {
       const result = await contentAPI.bootstrap();
+      bootstrapRef.current = result.data;
       setBootstrap(result.data);
       setStale(result.stale);
     } catch (reason) {
+      if (bootstrapRef.current) setStale(true);
       setError(reason instanceof Error ? reason.message : 'Could not load content.');
     } finally {
       setLoading(false);
@@ -34,6 +39,13 @@ export const AppContentProvider = ({children}: {children: React.ReactNode}) => {
 
   useEffect(() => {
     refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active' && bootstrapRef.current) refresh();
+    });
+    return () => subscription.remove();
   }, [refresh]);
 
   return (

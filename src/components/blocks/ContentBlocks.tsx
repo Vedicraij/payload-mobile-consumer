@@ -7,17 +7,17 @@ import {colors, spacing} from '../../theme/tokens';
 import type {BlockOf} from '../../types/content';
 import {openContentLink} from './contentLinks';
 
-export const TextBlock = ({block}: {block: BlockOf<'textBlock'>}) => <View style={styles.text}><Text style={styles.eyebrow}>{block.eyebrow}</Text><Text style={styles.heading}>{block.heading}</Text><Text style={styles.body}>{block.body}</Text></View>;
+export const TextBlock = ({block}: {block: BlockOf<'textBlock'>}) => <View style={styles.text}><Text style={styles.eyebrow}>{block.eyebrow}</Text><Text accessibilityRole="header" style={styles.heading}>{block.heading}</Text><Text style={styles.body}>{block.body}</Text></View>;
 export const ImageBlock = ({block}: {block: BlockOf<'imageBlock'>}) => <View><RemoteImage height={340} media={block.mobileImage || block.image} />{block.caption ? <Text style={styles.caption}>{block.caption}</Text> : null}</View>;
 export const CTABlock = ({block, onNavigate}: {block: BlockOf<'restaurantCTA'>; onNavigate: (path: string) => void}) => {
   const posthog = usePostHog();
   return (
     <View style={styles.cta}>
-      <Text style={styles.ctaHeading}>{block.headline}</Text>
+      <Text accessibilityRole="header" style={styles.ctaHeading}>{block.headline}</Text>
       <Text style={styles.ctaBody}>{block.description}</Text>
       {block.label ? (
         <Pressable
-          accessibilityRole="button"
+          accessibilityRole="link"
           onPress={() => {
             posthog.capture('cta_tapped', {
               label: block.label ?? null,

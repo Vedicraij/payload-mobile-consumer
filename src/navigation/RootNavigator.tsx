@@ -32,11 +32,11 @@ const ReorderIcon = ({focused}: {focused: boolean}) => <TabMark focused={focused
 const MainTabs = () => {
   const {bootstrap} = useAppContent();
   const labels = Object.fromEntries((bootstrap?.navigation?.items || []).map(item => [item.destination.path, item.label]));
-  return <Tabs.Navigator screenOptions={{headerStyle: {backgroundColor: colors.paper}, headerTitleStyle: {fontWeight: '900'}, tabBarActiveTintColor: colors.tomato, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: {fontSize: 10, fontWeight: '800', textTransform: 'uppercase'}, tabBarStyle: {backgroundColor: colors.ink, borderTopWidth: 0, height: 68, paddingBottom: 8, paddingTop: 8}}}>
-    <Tabs.Screen component={HomeScreen} name="Home" options={{tabBarLabel: labels['/'] || 'Home', tabBarIcon: HomeIcon, title: 'Casa Maiz'}} />
-    <Tabs.Screen component={MenuScreen} name="Menu" options={{tabBarLabel: labels['/menu'] || 'Menu', tabBarIcon: MenuIcon}} />
-    <Tabs.Screen component={ReservationsScreen} name="Reservations" options={{tabBarLabel: labels['/reservas'] || 'Reserve', tabBarIcon: ReservationIcon}} />
-    {bootstrap?.featureFlags.show_reorder ? <Tabs.Screen component={ReorderScreen} name="Reorder" options={{tabBarIcon: ReorderIcon}} /> : null}
+  return <Tabs.Navigator screenOptions={{headerShown: false, tabBarActiveTintColor: colors.tomato, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: {fontSize: 10, fontWeight: '800', textTransform: 'uppercase'}, tabBarStyle: {backgroundColor: colors.ink, borderTopWidth: 0, height: 68, paddingBottom: 8, paddingTop: 8}}}>
+    <Tabs.Screen component={HomeScreen} name="Home" options={{tabBarAccessibilityLabel: 'Home', tabBarButtonTestID: 'tab-home', tabBarLabel: labels['/'] || 'Home', tabBarIcon: HomeIcon}} />
+    <Tabs.Screen component={MenuScreen} name="Menu" options={{tabBarAccessibilityLabel: 'Menu', tabBarButtonTestID: 'tab-menu', tabBarLabel: labels['/menu'] || 'Menu', tabBarIcon: MenuIcon}} />
+    <Tabs.Screen component={ReservationsScreen} name="Reservations" options={{tabBarAccessibilityLabel: 'Reservations', tabBarButtonTestID: 'tab-reservations', tabBarLabel: labels['/reservas'] || 'Reserve', tabBarIcon: ReservationIcon}} />
+    {bootstrap?.featureFlags.show_reorder ? <Tabs.Screen component={ReorderScreen} name="Reorder" options={{tabBarAccessibilityLabel: 'Reorder', tabBarButtonTestID: 'tab-reorder', tabBarIcon: ReorderIcon}} /> : null}
   </Tabs.Navigator>;
 };
 
@@ -50,31 +50,31 @@ export const RootNavigator = () => {
   const routeNameRef = useRef<string | undefined>(undefined);
 
   return (
-    <OperationalGate>
-      <NavigationContainer
-        linking={linking}
-        ref={navigationRef}
-        onReady={() => {
-          routeNameRef.current = navigationRef.current?.getCurrentRoute()?.name;
-        }}
-        onStateChange={() => {
-          const previousRouteName = routeNameRef.current;
-          const currentRouteName = navigationRef.current?.getCurrentRoute()?.name;
-          if (previousRouteName !== currentRouteName && currentRouteName) {
-            posthog.screen(currentRouteName, {previous_screen: previousRouteName ?? null});
-          }
-          routeNameRef.current = currentRouteName;
-        }}>
-        <PostHogProvider
-          client={posthog}
-          autocapture={{captureScreens: false, captureTouches: true, propsToCapture: ['testID']}}>
+    <PostHogProvider
+      client={posthog}
+      autocapture={{captureScreens: false, captureTouches: true, propsToCapture: ['testID']}}>
+      <OperationalGate>
+        <NavigationContainer
+          linking={linking}
+          ref={navigationRef}
+          onReady={() => {
+            routeNameRef.current = navigationRef.current?.getCurrentRoute()?.name;
+          }}
+          onStateChange={() => {
+            const previousRouteName = routeNameRef.current;
+            const currentRouteName = navigationRef.current?.getCurrentRoute()?.name;
+            if (previousRouteName !== currentRouteName && currentRouteName) {
+              posthog.screen(currentRouteName, {previous_screen: previousRouteName ?? null});
+            }
+            routeNameRef.current = currentRouteName;
+          }}>
           <Stack.Navigator>
             <Stack.Screen component={MainTabs} name="Main" options={{headerShown: false}} />
-            <Stack.Screen component={LegalScreen} name="Legal" options={{headerBackTitle: 'Back', title: 'Casa Maiz'}} />
+            <Stack.Screen component={LegalScreen} name="Legal" options={{headerBackTitle: 'Back', title: 'Casa Maíz'}} />
           </Stack.Navigator>
-        </PostHogProvider>
-      </NavigationContainer>
-    </OperationalGate>
+        </NavigationContainer>
+      </OperationalGate>
+    </PostHogProvider>
   );
 };
 

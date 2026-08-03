@@ -1,5 +1,6 @@
 import DeviceInfo from 'react-native-device-info';
-import React, {useMemo, useState} from 'react';
+import {usePostHog} from 'posthog-react-native';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Linking, Modal, Platform, Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {ScreenState} from './ScreenState';
@@ -25,12 +26,56 @@ export const OperationalGate = ({children}: {children: React.ReactNode}) => {
   const recommended = update?.policy === 'recommended' && Boolean(update.recommendedVersion && compare(version, update.recommendedVersion) < 0);
   const storeURL = Platform.OS === 'ios' ? update?.iosStoreUrl : update?.androidStoreUrl;
   const showUpdate = useMemo(() => !dismissed && (required || recommended), [dismissed, recommended, required]);
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    if (showUpdate) {
+      posthog.capture('app_update_prompted', {
+        update_policy: update?.policy ?? null,
+        is_required: required,
+        current_version: version,
+        minimum_version: update?.minimumVersion ?? null,
+        recommended_version: update?.recommendedVersion ?? null,
+      });
+    }
+  }, [showUpdate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading && !bootstrap) return <ScreenState />;
   if (error && !bootstrap) return <ScreenState message={error} onRetry={refresh} />;
   if (controls?.mode === 'maintenance') return <View style={styles.maintenance}><Text style={styles.mark}>CASA MAIZ</Text><Text style={styles.title}>The fire rests for a moment.</Text><Text style={styles.body}>{controls.maintenanceMessage || 'We are performing maintenance. Please return soon.'}</Text></View>;
 
-  return <>{controls?.mode === 'notice' && controls.bannerMessage ? <Text style={styles.notice}>{controls.bannerMessage}</Text> : null}{bootstrap?.featureFlags.show_store_locator_banner ? <Text style={styles.storeBanner}>Find your nearest Casa Maiz location</Text> : null}{children}<Modal animationType="slide" transparent visible={showUpdate}><View style={styles.overlay}><View style={styles.modal}><Text style={styles.mark}>APP UPDATE</Text><Text style={styles.modalTitle}>{required ? 'Update required' : 'A new version is ready'}</Text><Text style={styles.modalBody}>{update?.message || 'Update Casa Maiz for the latest experience.'}</Text>{storeURL ? <Pressable onPress={() => Linking.openURL(storeURL)} style={styles.updateButton}><Text style={styles.updateButtonText}>Update now</Text></Pressable> : null}{!required ? <Pressable onPress={() => setDismissed(true)} style={styles.later}><Text>Not now</Text></Pressable> : null}</View></View></Modal></>;
+  return (
+    <>
+      {controls?.mode === 'notice' && controls.bannerMessage ? <Text style={styles.notice}>{controls.bannerMessage}</Text> : null}
+      {bootstrap?.featureFlags.show_store_locator_banner ? <Text style={styles.storeBanner}>Find your nearest Casa Maiz location</Text> : null}
+      {children}
+      <Modal animationType="slide" transparent visible={showUpdate}>
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            <Text style={styles.mark}>APP UPDATE</Text>
+            <Text style={styles.modalTitle}>{required ? 'Update required' : 'A new version is ready'}</Text>
+            <Text style={styles.modalBody}>{update?.message || 'Update Casa Maiz for the latest experience.'}</Text>
+            {storeURL ? (
+              <Pressable
+                onPress={() => {
+                  posthog.capture('app_update_started', {
+                    update_policy: update?.policy ?? null,
+                    is_required: required,
+                    current_version: version,
+                    store_url: storeURL,
+                  });
+                  Linking.openURL(storeURL);
+                }}
+                style={styles.updateButton}>
+                <Text style={styles.updateButtonText}>Update now</Text>
+              </Pressable>
+            ) : null}
+            {!required ? <Pressable onPress={() => setDismissed(true)} style={styles.later}><Text>Not now</Text></Pressable> : null}
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
 };
 
 const styles = StyleSheet.create({

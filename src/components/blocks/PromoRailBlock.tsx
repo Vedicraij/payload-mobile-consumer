@@ -1,3 +1,4 @@
+import {usePostHog} from 'posthog-react-native';
 import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 
@@ -6,9 +7,41 @@ import {colors, spacing} from '../../theme/tokens';
 import type {BlockOf} from '../../types/content';
 import {openContentLink} from './contentLinks';
 
-export const PromoRailBlock = ({block, onNavigate}: {block: BlockOf<'promoRail'>; onNavigate: (path: string) => void}) => (
-  <View style={styles.section}><Text style={styles.heading}>{block.title}</Text>{block.promotions?.map(promo => <View key={promo.id} style={styles.promo}><RemoteImage height={190} media={promo.mobileImage || promo.desktopImage} /><View style={styles.copy}><Text style={styles.eyebrow}>{promo.eyebrow}</Text><Text style={styles.title}>{promo.title}</Text><Text style={styles.body}>{promo.description}</Text>{promo.cta?.destination?.path ? <Pressable accessibilityRole="button" onPress={() => openContentLink(promo.cta?.destination?.path, onNavigate)} style={styles.button}><Text style={styles.buttonText}>{promo.cta.label || 'Learn more'}</Text></Pressable> : null}</View></View>)}</View>
-);
+export const PromoRailBlock = ({block, onNavigate}: {block: BlockOf<'promoRail'>; onNavigate: (path: string) => void}) => {
+  const posthog = usePostHog();
+  return (
+    <View style={styles.section}>
+      <Text style={styles.heading}>{block.title}</Text>
+      {block.promotions?.map(promo => (
+        <View key={promo.id} style={styles.promo}>
+          <RemoteImage height={190} media={promo.mobileImage || promo.desktopImage} />
+          <View style={styles.copy}>
+            <Text style={styles.eyebrow}>{promo.eyebrow}</Text>
+            <Text style={styles.title}>{promo.title}</Text>
+            <Text style={styles.body}>{promo.description}</Text>
+            {promo.cta?.destination?.path ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  posthog.capture('promo_cta_tapped', {
+                    promo_id: promo.id,
+                    promo_title: promo.title,
+                    cta_label: promo.cta?.label || 'Learn more',
+                    destination: promo.cta?.destination?.path ?? null,
+                    rail_title: block.title ?? null,
+                  });
+                  openContentLink(promo.cta?.destination?.path, onNavigate);
+                }}
+                style={styles.button}>
+                <Text style={styles.buttonText}>{promo.cta.label || 'Learn more'}</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   body: {color: colors.white, lineHeight: 21},

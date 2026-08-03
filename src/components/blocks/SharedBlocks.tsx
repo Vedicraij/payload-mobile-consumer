@@ -1,3 +1,4 @@
+import {usePostHog} from 'posthog-react-native';
 import React, {useState} from 'react';
 import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
 
@@ -55,16 +56,33 @@ const archiveItems = (block: BlockOf<'archive'>): ArchiveItem[] => {
   return block.selectedDocs?.flatMap(item => typeof item.value === 'object' ? [item.value] : []) || [];
 };
 
-export const SharedArchiveBlock = ({block, onNavigate}: NavigationProps & {block: BlockOf<'archive'>}) => (
-  <View style={styles.section}>
-    <RichText value={block.introContent} />
-    {archiveItems(block).map((item, index) => {
-      const copy = item.excerpt || item.meta?.description;
-      const card = <View style={styles.archiveItem}><Text accessibilityRole="header" style={styles.itemTitle}>{item.title || 'Untitled'}</Text>{copy ? <Text style={styles.itemBody}>{copy}</Text> : null}</View>;
-      return item.slug ? <Pressable accessibilityRole="link" key={item.id || item.slug} onPress={() => openContentLink(`/posts/${item.slug}`, onNavigate)}>{card}</Pressable> : <View key={item.id || index}>{card}</View>;
-    })}
-  </View>
-);
+export const SharedArchiveBlock = ({block, onNavigate}: NavigationProps & {block: BlockOf<'archive'>}) => {
+  const posthog = usePostHog();
+  return (
+    <View style={styles.section}>
+      <RichText value={block.introContent} />
+      {archiveItems(block).map((item, index) => {
+        const copy = item.excerpt || item.meta?.description;
+        const card = <View style={styles.archiveItem}><Text accessibilityRole="header" style={styles.itemTitle}>{item.title || 'Untitled'}</Text>{copy ? <Text style={styles.itemBody}>{copy}</Text> : null}</View>;
+        return item.slug ? (
+          <Pressable
+            accessibilityRole="link"
+            key={item.id || item.slug}
+            onPress={() => {
+              posthog.capture('archive_item_tapped', {
+                item_id: item.id ?? null,
+                item_slug: item.slug ?? null,
+                item_title: item.title ?? null,
+              });
+              openContentLink(`/posts/${item.slug}`, onNavigate);
+            }}>
+            {card}
+          </Pressable>
+        ) : <View key={item.id || index}>{card}</View>;
+      })}
+    </View>
+  );
+};
 
 type FormValue = boolean | number | string;
 
@@ -106,6 +124,7 @@ export const SharedFormBlock = ({block, onNavigate}: NavigationProps & {block: B
   const [values, setValues] = useState<Record<string, FormValue>>(() => initialValues(fields));
   const [status, setStatus] = useState<'idle' | 'submitting' | 'submitted' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const posthog = usePostHog();
 
   if (!form) return <View style={styles.section}><Text>Form unavailable.</Text></View>;
 
@@ -128,11 +147,13 @@ export const SharedFormBlock = ({block, onNavigate}: NavigationProps & {block: B
         method: 'POST',
       });
       if (!response.ok) throw new Error(`Form submission failed (${response.status}).`);
+      posthog.capture('form_submitted', {form_id: form.id, form_title: form.title});
       setStatus('submitted');
       if (form.confirmationType === 'redirect') {
         await openContentLink(form.redirect?.url, onNavigate);
       }
     } catch {
+      posthog.capture('form_submission_failed', {form_id: form.id, form_title: form.title});
       setMessage('Something went wrong. Please try again.');
       setStatus('error');
     }

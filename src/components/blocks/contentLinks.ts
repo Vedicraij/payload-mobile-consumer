@@ -1,5 +1,6 @@
 import {Linking} from 'react-native';
 
+import {posthog} from '../../config/posthog';
 import type {CMSLink} from '../../types/content';
 
 const externalScheme = /^(https?:|mailto:|tel:)/i;
@@ -30,6 +31,7 @@ export const openContentLink = async (
 
   try {
     if (await Linking.canOpenURL(target)) {
+      posthog.capture('external_link_opened', {url: target});
       await Linking.openURL(target);
     } else {
       warn(`No application can open CMS link: ${target}`);

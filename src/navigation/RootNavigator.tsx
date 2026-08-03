@@ -1,8 +1,11 @@
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {NavigationContainer, type LinkingOptions, type NavigatorScreenParams} from '@react-navigation/native';
+import {NavigationContainer, type LinkingOptions, type NavigationContainerRef, type NavigatorScreenParams} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import React from 'react';
+import {PostHogProvider} from 'posthog-react-native';
+import React, {useRef} from 'react';
 import {StyleSheet, Text} from 'react-native';
+
+import {posthog} from '../config/posthog';
 
 import {OperationalGate} from '../components/OperationalGate';
 import {useAppContent} from '../context/AppContentContext';
@@ -42,7 +45,38 @@ const linking: LinkingOptions<RootStackParams> = {
   config: {screens: {Main: {screens: {Home: '', Menu: 'menu', Reservations: 'reservas', Reorder: 'reorder'}}, Legal: 'legal/:key'}},
 };
 
-export const RootNavigator = () => <OperationalGate><NavigationContainer linking={linking}><Stack.Navigator><Stack.Screen component={MainTabs} name="Main" options={{headerShown: false}} /><Stack.Screen component={LegalScreen} name="Legal" options={{headerBackTitle: 'Back', title: 'Casa Maiz'}} /></Stack.Navigator></NavigationContainer></OperationalGate>;
+export const RootNavigator = () => {
+  const navigationRef = useRef<NavigationContainerRef<RootStackParams>>(null);
+  const routeNameRef = useRef<string | undefined>(undefined);
+
+  return (
+    <OperationalGate>
+      <NavigationContainer
+        linking={linking}
+        ref={navigationRef}
+        onReady={() => {
+          routeNameRef.current = navigationRef.current?.getCurrentRoute()?.name;
+        }}
+        onStateChange={() => {
+          const previousRouteName = routeNameRef.current;
+          const currentRouteName = navigationRef.current?.getCurrentRoute()?.name;
+          if (previousRouteName !== currentRouteName && currentRouteName) {
+            posthog.screen(currentRouteName, {previous_screen: previousRouteName ?? null});
+          }
+          routeNameRef.current = currentRouteName;
+        }}>
+        <PostHogProvider
+          client={posthog}
+          autocapture={{captureScreens: false, captureTouches: true, propsToCapture: ['testID']}}>
+          <Stack.Navigator>
+            <Stack.Screen component={MainTabs} name="Main" options={{headerShown: false}} />
+            <Stack.Screen component={LegalScreen} name="Legal" options={{headerBackTitle: 'Back', title: 'Casa Maiz'}} />
+          </Stack.Navigator>
+        </PostHogProvider>
+      </NavigationContainer>
+    </OperationalGate>
+  );
+};
 
 const styles = StyleSheet.create({
   tabMark: {color: colors.muted, fontSize: 17, fontWeight: '900'},

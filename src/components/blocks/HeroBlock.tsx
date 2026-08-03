@@ -1,3 +1,4 @@
+import {usePostHog} from 'posthog-react-native';
 import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 
@@ -6,17 +7,37 @@ import {colors, spacing} from '../../theme/tokens';
 import type {BlockOf} from '../../types/content';
 import {openContentLink} from './contentLinks';
 
-export const HeroBlock = ({block, onNavigate}: {block: BlockOf<'restaurantHero'>; onNavigate: (path: string) => void}) => (
-  <View style={styles.container}>
-    <View style={styles.copy}>
-      <Text style={styles.eyebrow}>{block.eyebrow}</Text>
-      <Text accessibilityRole="header" style={styles.title}>{block.headline}</Text>
-      <Text style={styles.description}>{block.description}</Text>
-      <View style={styles.actions}>{block.actions?.map(action => <Pressable accessibilityRole="button" key={action.label} onPress={() => openContentLink(action.destination?.path || action.href, onNavigate)} style={styles.button}><Text style={styles.buttonText}>{action.label}</Text></Pressable>)}</View>
+export const HeroBlock = ({block, onNavigate}: {block: BlockOf<'restaurantHero'>; onNavigate: (path: string) => void}) => {
+  const posthog = usePostHog();
+  return (
+    <View style={styles.container}>
+      <View style={styles.copy}>
+        <Text style={styles.eyebrow}>{block.eyebrow}</Text>
+        <Text accessibilityRole="header" style={styles.title}>{block.headline}</Text>
+        <Text style={styles.description}>{block.description}</Text>
+        <View style={styles.actions}>
+          {block.actions?.map(action => (
+            <Pressable
+              accessibilityRole="button"
+              key={action.label}
+              onPress={() => {
+                posthog.capture('hero_cta_tapped', {
+                  label: action.label,
+                  destination: action.destination?.path || action.href || null,
+                  headline: block.headline ?? null,
+                });
+                openContentLink(action.destination?.path || action.href, onNavigate);
+              }}
+              style={styles.button}>
+              <Text style={styles.buttonText}>{action.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+      <RemoteImage height={300} media={block.mobileImage || block.image} />
     </View>
-    <RemoteImage height={300} media={block.mobileImage || block.image} />
-  </View>
-);
+  );
+};
 
 const styles = StyleSheet.create({
   actions: {flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg},

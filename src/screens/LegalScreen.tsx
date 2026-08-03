@@ -1,4 +1,5 @@
 import type {RouteProp} from '@react-navigation/native';
+import {usePostHog} from 'posthog-react-native';
 import React, {useEffect, useState} from 'react';
 import {ScrollView, StyleSheet, Text} from 'react-native';
 
@@ -18,10 +19,20 @@ const lexicalText = (value: unknown): string => {
 export const LegalScreen = ({route}: {route: RouteProp<{Legal: {key: string}}, 'Legal'>}) => {
   const [content, setContent] = useState<LegalContent | null>(null);
   const [error, setError] = useState('');
+  const posthog = usePostHog();
 
   useEffect(() => {
-    contentAPI.legal(route.params.key).then(result => setContent(result.data)).catch(reason => setError(reason instanceof Error ? reason.message : 'Could not load legal content.'));
-  }, [route.params.key]);
+    contentAPI.legal(route.params.key)
+      .then(result => {
+        setContent(result.data);
+        posthog.capture('legal_document_viewed', {
+          document_key: route.params.key,
+          document_title: result.data.title,
+          legal_version: result.data.legalVersion ?? null,
+        });
+      })
+      .catch(reason => setError(reason instanceof Error ? reason.message : 'Could not load legal content.'));
+  }, [route.params.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (error) return <ScreenState message={error} />;
   if (!content) return <ScreenState />;

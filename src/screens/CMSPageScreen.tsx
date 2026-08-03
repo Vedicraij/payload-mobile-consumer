@@ -1,10 +1,11 @@
 import type {NavigationProp} from '@react-navigation/native';
 import {useIsFocused, useNavigation} from '@react-navigation/native';
+import {usePostHog} from 'posthog-react-native';
 import React, {useCallback, useEffect, useState} from 'react';
 import {FlatList, type NativeScrollEvent, type NativeSyntheticEvent, RefreshControl, StyleSheet, Text, View} from 'react-native';
 
 import {BlockRenderer} from '../components/BlockRenderer';
-import {ContentAlerts} from '../components/ContentAlerts';
+import {ContentAlerts, type ContentAlertEvent} from '../components/ContentAlerts';
 import {ScreenState} from '../components/ScreenState';
 import {useAppContent} from '../context/AppContentContext';
 import {useCMSPage} from '../context/useCMSPage';
@@ -28,6 +29,38 @@ export const CMSPageScreen = ({slug}: {slug: string}) => {
   const {bootstrap} = useAppContent();
   const {page, error, loading, refreshing, reload, stale} = useCMSPage(slug);
   const [scrollPercent, setScrollPercent] = useState(0);
+  const posthog = usePostHog();
+
+  const onAlertEvent = useCallback((event: ContentAlertEvent) => {
+    if (event.type === 'impression') {
+      posthog.capture('content_alert_impression', {
+        alert_id: event.alert.id,
+        alert_title: event.alert.title,
+        alert_placement: event.alert.placement,
+        page_slug: slug,
+      });
+    } else if (event.type === 'action') {
+      posthog.capture('content_alert_action_tapped', {
+        alert_id: event.alert.id,
+        alert_title: event.alert.title,
+        action_label: event.action?.label ?? null,
+        action_href: event.action?.href ?? null,
+        page_slug: slug,
+      });
+    } else if (event.type === 'dismiss') {
+      posthog.capture('content_alert_dismissed', {
+        alert_id: event.alert.id,
+        alert_title: event.alert.title,
+        alert_placement: event.alert.placement,
+        page_slug: slug,
+      });
+    }
+  }, [posthog, slug]);
+
+  const onRefresh = useCallback(() => {
+    posthog.capture('content_refresh_triggered', {page_slug: slug});
+    reload();
+  }, [posthog, reload, slug]);
 
   useEffect(() => setScrollPercent(0), [slug]);
   const onNavigate = useCallback((path: string) => {
@@ -61,6 +94,7 @@ export const CMSPageScreen = ({slug}: {slug: string}) => {
       <ContentAlerts
         alerts={bootstrap?.alerts}
         isFocused={isFocused}
+        onEvent={onAlertEvent}
         onNavigate={onNavigate}
         pageLoaded={Boolean(page)}
         scrollPercent={scrollPercent}
@@ -69,7 +103,7 @@ export const CMSPageScreen = ({slug}: {slug: string}) => {
       <FlatList<ContentBlock>
         data={page?.layout || []}
         keyExtractor={(item, index) => `${item.blockType}-${index}`}
-        refreshControl={<RefreshControl colors={[colors.tomato]} onRefresh={reload} refreshing={refreshing} tintColor={colors.tomato} />}
+        refreshControl={<RefreshControl colors={[colors.tomato]} onRefresh={onRefresh} refreshing={refreshing} tintColor={colors.tomato} />}
         renderItem={({item}) => <BlockRenderer block={item} onNavigate={onNavigate} />}
         onScroll={onScroll}
         scrollEventThrottle={16}

@@ -3,6 +3,38 @@
 Native React Native application for iOS and Android, powered by the versioned
 Payload CMS content API.
 
+## Quality Strategy & Risk Model
+
+This document defines the automation strategy, risk priorities, and test layers for the mobile application. The goal is to build a maintainable, reliable, and executable quality solution across API, component/integration, and end-to-end layers.
+
+### Risk identification (ordered by criticality)
+
+| Risk | Impact | Primary test layer | Mitigation strategy |
+|------|--------|---------------------|----------------------|
+| **Content contract version mismatch** | Client may consume an incompatible API version without detection. | API / Contract (separate repository) | Contract tests validate the envelope, detect additive fields safely, and fail on breaking changes. |
+| **Dynamic CMS block rendering** | An unknown or malformed block can crash the UI or cause blank sections. | Component / Integration (React Native Testing Library) | Tests ensure known blocks render correctly; unknown blocks fall back without crashing. |
+| **Navigation and destination resolution** | CMS links may point to undefined or incorrectly resolved destinations. | Integration (React Native Testing Library) | Interaction tests simulate clicks and verify navigation using mocked routers, avoiding hardcoded IDs. |
+| **Platform-specific behavior (iOS/Android)** | Differences in rendering, styles, or effect handling. | Component / Integration | Tests mock `Platform.OS` to validate platform-specific logic without duplicating whole suites. |
+| **Cache and `nextChangeAt` staleness** | Stale cached content may be served beyond its validity window. | Integration (effects and timers) | Time-controlled tests (`jest.useFakeTimers`) simulate expiration and verify refresh or stale display. |
+| **Network failures / degradation** | App must gracefully handle timeouts, 404s, or incompatible contracts. | Mobile E2E (Maestro/Detox) | Degradation scenario mocks slow or failing requests and verifies error messages and retry paths. |
+| **Accessibility** | CMS blocks may lack labels, roles, or alternative text. | Component (RTNL) + Web E2E (Playwright) | Assertions for `accessible`, `role`, `label`; web uses `getByRole` and axe audits. |
+| **iOS/Android behavioral differences** | Platform-specific variations in touch handling, navigation, or performance. | Component / Integration + Mobile E2E | Platform-specific assertions in tests and dual-platform E2E validation. |
+| **Mobile E2E reliability** | Flaky tests reducing confidence in test suite. | Mobile E2E | Stable selectors, no fixed sleeps, proper wait strategies, and deterministic test data. |
+
+### Test layer distribution
+
+- **API / Contract** (separate repository): ~30% effort – endpoint validation, contract shape, error handling.
+- **React Native Component / Integration** (this repository): ~40% effort – rendering logic, navigation, cache, platform differences.
+- **Mobile E2E** (this repository): ~20% effort – critical journeys and degradation scenarios.
+- **Playwright Web** (separate repository): ~10% effort – web consumer validation and accessibility.
+
+### Guiding principles
+
+- **Avoid coupling to IDs or editorial content**: Use semantic assertions (titles, roles, visible text) and compare against contract structure, not hardcoded database values.
+- **Isolate state**: Each test must be reproducible and order-independent.
+- **Mock external dependencies**: In integration tests, intercept CMS requests with deterministic mocks.
+- **Control time**: Use fake timers to avoid sleeps and ensure fast, reliable tests.
+
 ## What the app demonstrates
 
 - CMS-driven home, menu, promotions, legal content, and forms

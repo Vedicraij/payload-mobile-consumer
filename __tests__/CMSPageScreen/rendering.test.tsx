@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, act, waitFor } from '@testing-library/react-native';
-import { CMSPageScreen } from '../src/screens/CMSPageScreen';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react-native';
+import { CMSPageScreen } from '../../src/screens/CMSPageScreen';
 
 // React Navigation Mocks
 jest.mock('@react-navigation/native', () => ({
@@ -14,42 +14,65 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 // Context hooks Mocks
-jest.mock('../src/context/useCMSPage', () => ({
+jest.mock('../../src/context/useCMSPage', () => ({
   useCMSPage: jest.fn(),
 }));
 
-jest.mock('../src/context/AppContentContext', () => ({
+jest.mock('../../src/context/AppContentContext', () => ({
   useAppContent: jest.fn(),
 }));
 
-// TestID Screenstate Mocks
-jest.mock('../src/components/ScreenState', () => ({
+// ScreenState Mock - matches actual component testIDs
+jest.mock('../../src/components/ScreenState', () => ({
   ScreenState: ({ message, onRetry }: any) => {
-    const { View, Text, Pressable } = require('react-native');
+    const { View, Text, Pressable, ActivityIndicator } = require('react-native');
     return (
-      <View testID="screen-state">
-        {message && (
-          <View testID="screen-state-message">
-            <Text>{message}</Text>
-          </View>
+      <View accessibilityLiveRegion="polite" testID="screen-state-container">
+        {message ? (
+          <Text accessibilityRole="alert" style={{}} testID="screen-error">
+            {message}
+          </Text>
+        ) : (
+          <ActivityIndicator accessibilityLabel="Loading content" testID="screen-loading" />
         )}
-        {onRetry && (
-          <Pressable testID="retry-button" onPress={onRetry}>
-            <Text>Retry</Text>
+        {onRetry ? (
+          <Pressable
+            accessibilityLabel="Try loading the content again"
+            accessibilityRole="button"
+            onPress={onRetry}
+            testID="retry-button"
+          >
+            <Text>Try again</Text>
           </Pressable>
-        )}
+        ) : null}
       </View>
     );
   },
 }));
 
-// Blockrender Mocks (just to avoid errors)
-jest.mock('../src/components/BlockRenderer', () => ({
+// BlockRenderer Mock - shows blockType
+jest.mock('../../src/components/BlockRenderer', () => ({
   BlockRenderer: ({ block }: any) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="block-renderer">
         <Text>{block.blockType}</Text>
+      </View>
+    );
+  },
+}));
+
+// ContentAlerts Mock - provides testID for alert presence verification
+jest.mock('../../src/components/ContentAlerts', () => ({
+  ContentAlerts: ({ alerts }: any) => {
+    const { View, Text } = require('react-native');
+    return (
+      <View testID="content-alerts">
+        {alerts.map((alert: any) => (
+          <Text key={alert.id} testID={`alert-${alert.id}`}>
+            {alert.title}
+          </Text>
+        ))}
       </View>
     );
   },
@@ -62,8 +85,10 @@ describe('CMSPageScreen', () => {
     jest.clearAllMocks();
   });
 
+  // ==================== BASIC RENDERING TESTS ====================
+
   test('renders loading state', async () => {
-    const { useCMSPage } = require('../src/context/useCMSPage');
+    const { useCMSPage } = require('../../src/context/useCMSPage');
     (useCMSPage as jest.Mock).mockReturnValue({
       page: null,
       error: null,
@@ -73,7 +98,7 @@ describe('CMSPageScreen', () => {
       stale: false,
     });
 
-    const { useAppContent } = require('../src/context/AppContentContext');
+    const { useAppContent } = require('../../src/context/AppContentContext');
     (useAppContent as jest.Mock).mockReturnValue({
       bootstrap: { alerts: [] },
     });
@@ -84,13 +109,13 @@ describe('CMSPageScreen', () => {
 
     // Wait for status update
     await waitFor(() => {
-      expect(screen.getByTestId('screen-state')).toBeTruthy();
+      expect(screen.getByTestId('screen-state-container')).toBeTruthy();
     });
   });
 
   test('renders error state with retry', async () => {
     const reload = jest.fn();
-    const { useCMSPage } = require('../src/context/useCMSPage');
+    const { useCMSPage } = require('../../src/context/useCMSPage');
     (useCMSPage as jest.Mock).mockReturnValue({
       page: null,
       error: 'Failed to load content',
@@ -100,7 +125,7 @@ describe('CMSPageScreen', () => {
       stale: false,
     });
 
-    const { useAppContent } = require('../src/context/AppContentContext');
+    const { useAppContent } = require('../../src/context/AppContentContext');
     (useAppContent as jest.Mock).mockReturnValue({
       bootstrap: { alerts: [] },
     });
@@ -110,7 +135,7 @@ describe('CMSPageScreen', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('screen-state-message')).toHaveTextContent('Failed to load content');
+      expect(screen.getByTestId('screen-error')).toHaveTextContent('Failed to load content');
       expect(screen.getByTestId('retry-button')).toBeTruthy();
     });
   });
@@ -124,7 +149,7 @@ describe('CMSPageScreen', () => {
       updatedAt: '2026-01-01T00:00:00.000Z',
     };
 
-    const { useCMSPage } = require('../src/context/useCMSPage');
+    const { useCMSPage } = require('../../src/context/useCMSPage');
     (useCMSPage as jest.Mock).mockReturnValue({
       page: mockPage,
       error: null,
@@ -134,7 +159,7 @@ describe('CMSPageScreen', () => {
       stale: false,
     });
 
-    const { useAppContent } = require('../src/context/AppContentContext');
+    const { useAppContent } = require('../../src/context/AppContentContext');
     (useAppContent as jest.Mock).mockReturnValue({
       bootstrap: { alerts: [] },
     });
@@ -143,7 +168,6 @@ describe('CMSPageScreen', () => {
       render(<CMSPageScreen slug={slug} />);
     });
 
-    // Render block check
     await waitFor(() => {
       expect(screen.getByTestId('block-renderer')).toBeTruthy();
     });

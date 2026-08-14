@@ -34,7 +34,7 @@ const MainTabs = () => {
   const labels = Object.fromEntries((bootstrap?.navigation?.items || []).map(item => [item.destination.path, item.label]));
   return <Tabs.Navigator screenOptions={{headerShown: false, tabBarActiveTintColor: colors.tomato, tabBarInactiveTintColor: colors.muted, tabBarLabelStyle: {fontSize: 10, fontWeight: '800', textTransform: 'uppercase'}, tabBarStyle: {backgroundColor: colors.ink, borderTopWidth: 0, height: 68, paddingBottom: 8, paddingTop: 8}}}>
     <Tabs.Screen component={HomeScreen} name="Home" options={{tabBarAccessibilityLabel: 'Home', tabBarButtonTestID: 'tab-home', tabBarLabel: labels['/'] || 'Home', tabBarIcon: HomeIcon}} />
-    <Tabs.Screen component={MenuScreen} name="Menu" options={{tabBarAccessibilityLabel: 'Menu', tabBarButtonTestID: 'tab-menu', tabBarLabel: labels['/menu'] || 'Menu', tabBarIcon: MenuIcon}} />
+    <Tabs.Screen component={MenuScreen} name="Menu" options={{tabBarAccessibilityLabel: 'Menu', tabBarButtonTestID: 'cms-link-menu', tabBarLabel: labels['/menu'] || 'Menu', tabBarIcon: MenuIcon}} />
     <Tabs.Screen component={ReservationsScreen} name="Reservations" options={{tabBarAccessibilityLabel: 'Reservations', tabBarButtonTestID: 'tab-reservations', tabBarLabel: labels['/reservas'] || 'Reserve', tabBarIcon: ReservationIcon}} />
     {bootstrap?.featureFlags.show_reorder ? <Tabs.Screen component={ReorderScreen} name="Reorder" options={{tabBarAccessibilityLabel: 'Reorder', tabBarButtonTestID: 'tab-reorder', tabBarIcon: ReorderIcon}} /> : null}
   </Tabs.Navigator>;

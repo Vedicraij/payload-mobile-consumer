@@ -1,0 +1,23 @@
+---
+appId: com.casamaiz
+launchOptions:
+  clearState: true
+
+- launchApp
+
+- waitFor:
+    id: "cms-page-home"
+    timeoutMs: 10000
+
+- assertVisible:
+    id: "cms-page-home"
+
+- tapOn:
+    id: "cms-link-menu"
+
+- waitFor:
+    id: "cms-page-menu"
+    timeoutMs: 10000
+
+- assertVisible:
+    id: "cms-page-menu"

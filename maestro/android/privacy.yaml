@@ -1,0 +1,8 @@
+---
+appId: com.casamaiz
+launchOptions:
+  clearState: true
+  deepLink: "casamaiz://legal/privacy"
+
+- assertVisible:
+    id: "legal-privacy"

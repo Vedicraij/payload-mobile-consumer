@@ -1,0 +1,25 @@
+---
+appId: com.casamaiz
+launchOptions:
+  clearState: true
+  environment:
+    CMS_URL: "http://invalid-endpoint.local"
+
+- launchApp
+
+- waitFor:
+    id: "screen-error"
+    timeoutMs: 15000
+
+- assertVisible:
+    id: "screen-error"
+
+- tapOn:
+    id: "retry-button"
+
+- waitFor:
+    id: "screen-error"
+    timeoutMs: 10000
+
+- assertVisible:
+    id: "screen-error"

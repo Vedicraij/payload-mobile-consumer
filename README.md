@@ -137,6 +137,58 @@ rendered blocks, form requests, validation, accessibility, and external
 navigation. React Native Testing Library is available for additional
 component and integration tests.
 
+## E2E Execution (Maestro)
+
+End-to-end tests are executed using Maestro on Android devices. The tests
+validate critical user journeys and capture failure artifacts for debugging.
+
+### Running E2E Tests
+
+```bash
+# Live test flow (home-to-menu and privacy)
+npm run test:e2e:android
+
+# Failure test flow (error handling simulation)
+npm run test:e2e:android:failure
+```
+
+### Reports and Artifacts
+
+After execution, reports and artifacts are stored in:
+- `reports/maestro/live/` - Live test results (home-to-menu, privacy)
+- `reports/maestro/failure/` - Failure test results
+
+Each directory contains:
+- JUnit XML reports (e.g., `junit-home-to-menu.xml`)
+- Maestro debug output directories
+- ADB logs (`adb-log.txt`)
+- Failure screenshots (`failure-screenshot.png` in failure directory)
+- JSON summary files (`summary.json`)
+
+### Test Architecture
+
+The E2E test suite consists of three Maestro flows:
+1. **home-to-menu.yaml**: Tests navigation from Home to Menu screen
+2. **privacy.yaml**: Tests deep linking to Privacy screen via URL scheme
+3. **failure.yaml**: Tests error handling when CMS endpoint is unavailable
+
+All flows use `testID` selectors for stable element identification and
+include proper timeout handling (30 seconds) for CI environment compatibility.
+
+## AI Usage
+
+The following AI tools were used during this assessment:
+
+- **Claude (via VS Code)** – Used to generate test skeletons, refactor code, and assist with debugging. Specifically, Claude helped:
+  - Refactor large test files into smaller, focused files.
+  - Debug issues with `SafeAreaProvider` and mocks.
+  - Generate PowerShell scripts.
+  - Review code and suggest improvements.
+
+All AI-generated code and suggestions were reviewed, tested, and validated against the project's standards before being committed.
+
+See [docs/AI_USAGE.md](docs/AI_USAGE.md) for more details.
+
 ## Deep links
 
 The `casamaiz://` scheme supports:

@@ -1,8 +1,25 @@
 ---
 appId: com.casamaiz
+name: Android - Privacy screen access via deep link
+# Test direct access to Privacy screen using URL scheme/deep link
 launchOptions:
   clearState: true
+  stopApp: true
+  # Using deep link to navigate directly to privacy screen
   deepLink: "casamaiz://legal/privacy"
 
+# Launch app with deep link to privacy screen
+# clearState and stopApp ensure clean test state
+- launchApp
+
+# Wait for Privacy screen to load (up to 30 seconds)
+# Using extendedWaitUntil for stable element detection in CI environments
+- extendedWaitUntil:
+    visible:
+      id: "legal-privacy"
+    timeout: 30000
+
+# Assert Privacy screen is visible with shorter timeout for fast failure
 - assertVisible:
     id: "legal-privacy"
+    timeout: 5000

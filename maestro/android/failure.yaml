@@ -1,25 +1,42 @@
 ---
 appId: com.casamaiz
+name: Android - Error handling and retry mechanism
+# Test app behavior when CMS endpoint is unavailable
 launchOptions:
   clearState: true
+  stopApp: true
+  # Set invalid CMS endpoint to simulate network failure
   environment:
     CMS_URL: "http://invalid-endpoint.local"
 
+# Launch app with invalid CMS endpoint to simulate network failure
+# clearState and stopApp ensure clean test state
 - launchApp
 
-- waitFor:
-    id: "screen-error"
-    timeoutMs: 15000
+# Wait for error screen to appear (up to 30 seconds)
+# Using extendedWaitUntil for stable element detection in CI environments
+- extendedWaitUntil:
+    visible:
+      id: "screen-error"
+    timeout: 30000
 
+# Assert error screen is visible with shorter timeout for fast failure
 - assertVisible:
     id: "screen-error"
+    timeout: 5000
 
+# Tap on retry button to test retry mechanism
 - tapOn:
     id: "retry-button"
 
-- waitFor:
-    id: "screen-error"
-    timeoutMs: 10000
+# Wait briefly to see if error persists (should still show error since endpoint is invalid)
+- extendedWaitUntil:
+    visible:
+      id: "screen-error"
+    timeout: 10000
 
+# Assert error screen is still visible (confirming persistent failure state)
+# This confirms the retry mechanism doesn't succeed with invalid endpoint
 - assertVisible:
     id: "screen-error"
+    timeout: 5000

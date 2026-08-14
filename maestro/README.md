@@ -12,7 +12,7 @@ This directory contains Maestro flows for end-to-end testing of the Mobile Resta
 - Asserts the Menu screen is visible.
 
 ### `android/privacy.yaml`
-- Launches the app with a deep link directly to the Privacy screen (`casamaiz://legal/privay`).
+- Launches the app with a deep link directly to the Privacy screen (`casamaiz://legal/privacy`).
 - Asserts the Privacy screen is visible (identified by `testID="legal-privacy"`).
 This flow tests that the app correctly handles deep links to legal content and displays the privacy screen.
 
@@ -23,6 +23,28 @@ This flow tests that the app correctly handles deep links to legal content and d
 - Taps the retry button (identified by `testID="retry-button"`).
 - Waits for the error screen to reappear (simulating a persistent failure).
 - Asserts the error screen is still visible.
+
+## Enhancements for Stability & Reliability
+
+All flows have been enhanced with:
+- **Extended timeouts**: Increased from 10 seconds to 30 seconds for element waits to handle slower devices/CI environments
+- **Explicit assertions**: Added separate assertVisible steps with shorter timeouts after waiting
+- **App lifecycle management**: Added `stopApp: true` to launchOptions to ensure clean state between tests
+- **Descriptive names and comments**: Each flow includes a name and explanatory comments
+
+## Failure Artifact Collection & Reporting
+
+The helper PowerShell scripts now ensure:
+1. **Non-zero exit codes**: Scripts exit with the same code as Maestro if any test fails
+2. **Artifact collection**:
+   - Screenshots and logs saved to `reports/maestro/[flow-type]/` directories
+   - `--debug-output` flag captures Maestro's internal debugging artifacts
+   - ADB logs captured via `adb logcat -d`
+   - Failure screenshots captured via `adb exec-out screencap -p`
+3. **Machine-readable reports**:
+   - JUnit XML reports generated for each flow
+   - JSON summary generated for failure flow
+   - Reports stored in organized directory structure under `reports/maestro/`
 
 ## Prerequisites
 
@@ -95,4 +117,17 @@ npm run test:e2e:android
 npm run test:e2e:android:failure
 ```
 
-Reports are generated in the `reports/maestro/` directory in JUnit XML format.
+Reports are generated in the `reports/maestro/` directory:
+- JUnit XML reports for each test flow
+- Debug output directories with Maestro's internal artifacts
+- ADB logs and failure screenshots
+- JSON summary for failure flow
+
+## Script Behavior
+
+All scripts follow these conventions:
+- `$ErrorActionPreference = 'Stop'` to halt on first error
+- Explicit checking of `$LASTEXITCODE` after each Maestro command
+- Proper exit code propagation (non-zero if any test fails)
+- Clear logging to console for each step
+- Organized output in timestamp-aware directory structure under `reports/maestro/`

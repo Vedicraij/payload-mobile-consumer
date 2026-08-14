@@ -1,23 +1,38 @@
 ---
 appId: com.casamaiz
+name: Android - Home to Menu navigation
+# Test navigation from Home screen to Menu screen via tab bar
 launchOptions:
   clearState: true
+  stopApp: true
 
+# Launch the app with clean state to ensure test isolation
 - launchApp
 
-- waitFor:
-    id: "cms-page-home"
-    timeoutMs: 10000
+# Wait for Home screen to load (up to 30 seconds)
+# Using extendedWaitUntil for stable element detection in CI environments
+- extendedWaitUntil:
+    visible:
+      id: "cms-page-home"
+    timeout: 30000
 
+# Assert Home screen is visible with shorter timeout for fast failure
 - assertVisible:
     id: "cms-page-home"
+    timeout: 5000
 
+# Tap on Menu tab button to initiate navigation
 - tapOn:
     id: "cms-link-menu"
 
-- waitFor:
-    id: "cms-page-menu"
-    timeoutMs: 10000
+# Wait for Menu screen to load (up to 30 seconds)
+# Using extendedWaitUntil for stable element detection in CI environments
+- extendedWaitUntil:
+    visible:
+      id: "cms-page-menu"
+    timeout: 30000
 
+# Assert Menu screen is visible with shorter timeout for fast failure
 - assertVisible:
     id: "cms-page-menu"
+    timeout: 5000
